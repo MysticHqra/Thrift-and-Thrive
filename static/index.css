@@ -1,0 +1,20 @@
+body {
+    height: 80vh;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    background-image: url("https://images.pexels.com/photos/925743/pexels-photo-925743.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2");
+    background-position: center;
+    background-size: cover;
+}
+
+.navbar {
+    height: 10%;
+    width: 100%;
+    background-color: rgb(60, 193, 164);
+}
+
+.container {
+    height: 90%;
+    width: 100%;
+}
