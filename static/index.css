@@ -1,20 +1,101 @@
 body {
-    height: 80vh;
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    background-image: url("https://images.pexels.com/photos/925743/pexels-photo-925743.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2");
-    background-position: center;
-    background-size: cover;
+    margin: 0;
+    font-family: 'Roboto', sans-serif;
+    color: #333;
+}
+
+header {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 100;
 }
 
 .navbar {
-    height: 10%;
+    height: 50px;
     width: 100%;
     background-color: rgb(60, 193, 164);
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-.container {
-    height: 90%;
-    width: 100%;
+.navbar a {
+    color: #fff;
+    padding: 15px 20px;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.navbar a:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.hero {
+    height: 90vh;
+    background-image: url("./vecteezy_minimalist-dark-gradient-wave-background-simple-design-for_7718309.jpg");
+    background-position: center;
+    background-size: cover;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: white;
+}
+
+.hero-content h1 {
+    font-size: 3rem;
+    margin-bottom: 20px;
+}
+
+.hero-content p {
+    font-size: 1.2rem;
+    margin-bottom: 30px;
+}
+
+.cta-btn {
+    padding: 10px 20px;
+    background-color: rgb(60, 193, 164);
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+.cta-btn:hover {
+    background-color: rgb(50, 160, 140);
+}
+
+.about-section {
+    padding: 50px;
+    text-align: center;
+}
+
+.featured-items {
+    padding: 50px;
+    background-color: #f9f9f9;
+    text-align: center;
+}
+
+.items-grid {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.item-card {
+    width: 150px;
+    background-color: white;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+footer {
+    background-color: rgb(60, 193, 164);
+    color: white;
+    padding: 20px;
+    text-align: center;
 }
