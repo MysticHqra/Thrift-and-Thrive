@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 
@@ -84,7 +84,9 @@ def register():
 
     if password != confirm_password:
         flash("Passwords do not match!", "error")
-        return redirect(url_for('home'))
+        # Check if 'next' is valid; if not, default to 'home'
+        next_page = request.form.get('next') or url_for('home')
+        return redirect(next_page)
 
     hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
     user = User(email=email, password=hashed_password)
@@ -92,13 +94,17 @@ def register():
     existing_user = User.query.filter_by(email=email).first()
     if existing_user:
         flash("Email already registered!", "error")
-        return redirect(url_for('home'))
+        # Check if 'next' is valid; if not, default to 'home'
+        next_page = request.form.get('next') or url_for('home')
+        return redirect(next_page)
 
     db.session.add(user)
     db.session.commit()
     session['user_id'] = user.id  # Log the user in
     flash("Registration successful! You are now logged in.", "success")
-    return redirect(url_for('home'))
+    # Check if 'next' is valid; if not, default to 'home'
+    next_page = request.form.get('next') or url_for('home')
+    return redirect(next_page)
 
 @app.route('/logout')
 def logout():

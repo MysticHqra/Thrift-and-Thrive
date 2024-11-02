@@ -1,9 +1,13 @@
-{% for cart_item, product in cart_items %}
-<div class="cart-item">
-    <img src="{{ product.image_url }}" alt="{{ product.name }}">
-    <h2>{{ product.name }}</h2>
-    <p>Price: ${{ product.price }}</p>
-    <input type="number" value="{{ cart_item.quantity }}" min="1" onchange="updateCart({{ product.id }}, this.value)">
-    <button onclick="removeFromCart({{ product.id }})">Remove</button>
-</div>
-{% endfor %}
+<html>
+    <body>
+        {% for cart_item, product in cart_items %}
+        <div class="cart-item">
+            <img src="{{ product.image_url }}" alt="{{ product.name }}">
+            <h2>{{ product.name }}</h2>
+            <p>Price: ${{ product.price }}</p>
+            <input type="number" value="{{ cart_item.quantity }}" min="1" onchange="updateCart({{ product.id }}, this.value)">
+            <button onclick="removeFromCart({{ product.id }})">Remove</button>
+        </div>
+        {% endfor %}
+    </body>
+</html>
