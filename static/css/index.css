@@ -33,7 +33,7 @@ header {
 
 .hero {
     height: 90vh;
-    background-image: url("./vecteezy_minimalist-dark-gradient-wave-background-simple-design-for_7718309.jpg");
+    background-image: url("../vecteezy_minimalist-dark-gradient-wave-background-simple-design-for_7718309.jpg");
     background-position: center;
     background-size: cover;
     display: flex;
@@ -98,4 +98,71 @@ footer {
     color: white;
     padding: 20px;
     text-align: center;
+}
+
+
+/* Modal container */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Modal content */
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 20px;
+    border-radius: 5px;
+    width: 300px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+/* Close button */
+.close {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    color: #aaa;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Form styling */
+.modal-content form {
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-content label {
+    margin-top: 10px;
+}
+
+.modal-content input {
+    padding: 10px;
+    margin: 5px 0;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.modal-content button {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #28a745;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.modal-content button:hover {
+    background-color: #218838;
 }
