@@ -1,13 +1,86 @@
-<html>
-    <body>
-        {% for cart_item, product in cart_items %}
-        <div class="cart-item">
-            <img src="{{ product.image_url }}" alt="{{ product.name }}">
-            <h2>{{ product.name }}</h2>
-            <p>Price: ${{ product.price }}</p>
-            <input type="number" value="{{ cart_item.quantity }}" min="1" onchange="updateCart({{ product.id }}, this.value)">
-            <button onclick="removeFromCart({{ product.id }})">Remove</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Cart</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/cart.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+                <div class="flash {{ 'flash-success' if category == 'success' else '' }}">{{ message }}</div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </body>
+    {% endif %}
+    {% endwith %}
+    <script>
+        // JavaScript to auto-hide flash messages after 3 seconds
+        setTimeout(function() {
+            const flashMessages = document.querySelector('.flash-messages');
+            if (flashMessages) {
+                flashMessages.style.display = 'none';
+            }
+        }, 3000); // 3 seconds
+
+        // Open login modal automatically if login_failed is in the URL
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('login_failed')) {
+                openModal(); // Function to open login modal
+            }
+        });
+    </script>
+
+    <header>
+        <div class="navbar">
+            <a href="/">Home</a>
+            <a href="/shop">Shop</a>
+            <a href="/about">About</a>
+            {% if 'user_id' in session %}
+                <a href="/profile">Profile</a>
+                <a href="/cart"><span class="cart-icon">🛒 <span class="cart-count">{{ cart_count }}</span></span></a>
+                <a href="/logout">Logout</a>
+            {% else %}
+                <a href="#" onclick="openModal()">Login</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="container">
+        <section class="cart-header">
+            <h1>Your Shopping Cart</h1>
+        </section>
+        {% if cart_items %}
+            <div class="cart-items">
+                {% for cart_item, product in cart_items %}
+                    <div class="cart-item">
+                        <img src="{{ product.image_url }}" alt="{{ product.name }}" class="cart-item-image">
+                        <div class="cart-item-details">
+                            <h2>{{ product.name }}</h2>
+                            <p>Price: ${{ product.price }}</p>
+                            <input type="number" value="{{ cart_item.quantity }}" min="1" onchange="updateCart({{ product.id }}, this.value)" class="quantity-input">
+                            <button onclick="removeFromCart({{ product.id }})" class="remove-btn">Remove</button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="cart-summary">
+                <p>Total Items: {{ total_items }}</p>
+                <p>Total Price: ${{ total_price }}</p>
+                <button onclick="window.location.href='{{ url_for('checkout') }}'" class="checkout-btn">Proceed to Checkout</button>
+            </div>
+        {% else %}
+            <p>Your cart is empty.</p>
+        {% endif %}
+    </div>
+
+    <footer>
+        <p>&copy; 2024 Thrift and Thrive. All rights reserved.</p>
+    </footer>
+</body>
 </html>

@@ -50,10 +50,7 @@ def profile():
 @app.route('/shop')
 def shop():
     products = Product.query.all()
-    cart_count = 0
-    if 'user_id' in session:
-        cart_count = Cart.query.filter_by(user_id=session['user_id']).count()
-    return render_template('shop.html', products=products, cart_count=cart_count)
+    return render_template('shop.html', products=products)
 
 @app.errorhandler(404)
 def page_not_found(e):
@@ -139,11 +136,23 @@ def add_to_cart(product_id):
 def cart():
     if 'user_id' not in session:
         flash("Please log in to view your cart.", "error")
-        return redirect(url_for('home'))
-    
+        # Redirect to referrer if available; otherwise, go to home page
+        return redirect(request.referrer or url_for('home'))
+
     user_id = session['user_id']
     cart_items = db.session.query(Cart, Product).join(Product, Cart.product_id == Product.id).filter(Cart.user_id == user_id).all()
+
     return render_template('cart.html', cart_items=cart_items)
+
+@app.route('/checkout')
+def checkout():
+    if 'user_id' not in session:
+        flash("Please log in to checkout.", "error")
+        return redirect(url_for('home'))
+
+    user_id = session['user_id']
+    cart_items = db.session.query(Cart, Product).join(Product, Cart.product_id == Product.id).filter(Cart.user_id == user_id).all()
+    return render_template('checkout.html', cart_items=cart_items)
 
 
 @app.route('/add_sample_products')
@@ -154,6 +163,13 @@ def add_sample_products():
     db.session.add_all([product1, product2])
     db.session.commit()
     return "Sample products added!"
+
+@app.context_processor
+def cart_count_processor():
+    cart_count = 0
+    if 'user_id' in session:
+        cart_count = Cart.query.filter_by(user_id=session['user_id']).count()
+    return dict(cart_count=cart_count)
 
 if __name__ == '__main__':
     app.run(debug=True)

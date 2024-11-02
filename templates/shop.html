@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shop - Thrift and Thrive</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/shop.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <!-- Flash Messages -->
@@ -39,8 +41,8 @@
     <header>
         <div class="navbar">
             <a href="/">Home</a>
+            <a href="/shop">Shop</a>
             <a href="/about">About</a>
-            <a href="/contact">Contact</a>
             {% if 'user_id' in session %}
                 <a href="/profile">Profile</a>
                 <a href="/cart"><span class="cart-icon">🛒 <span class="cart-count">{{ cart_count }}</span></span></a>
@@ -48,7 +50,7 @@
             {% else %}
                 <a href="#" onclick="openModal()">Login</a>
             {% endif %}
-        </div>        
+        </div>
     </header>
 
     <!-- Registration/Login Modal -->
@@ -89,7 +91,7 @@
     <script src="{{ url_for('static', filename='js/modal.js') }}"></script>
 
     <section class="shop-header">
-        <h1>Shop</h1>
+        <h1>Catalogue</h1>
         <input type="text" id="search-bar" placeholder="Search for items..." onkeyup="filterItems()">
     </section>
 
