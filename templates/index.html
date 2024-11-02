@@ -8,15 +8,70 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+                <div class="flash {{ 'flash-success' if category == 'success' else '' }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% endwith %}
+    <script>
+        // JavaScript to auto-hide flash messages after 3 seconds
+        setTimeout(function() {
+            const flashMessages = document.querySelector('.flash-messages');
+            if (flashMessages) {
+                flashMessages.style.display = 'none';
+            }
+        }, 3000); // 3 seconds
+    </script>
+
     <header>
         <div class="navbar">
             <a href="/">Home</a>
             <a href="/about">About</a>
             <a href="/contact">Contact</a>
-            <a href="/profile">Profile</a>
-            <button class="login-btn" onclick="openModal()">Login</button>
+            {% if 'user_id' in session %}
+                <a href="/profile">Profile</a>
+                <a href="/logout">Logout</a>
+            {% else %}
+                <a href="#" onclick="openModal()">Login</a>
+            {% endif %}
         </div>
     </header>
+
+    <!-- Registration/Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>Login / Register</h2>
+
+            <!-- Login Form -->
+            <form id="loginForm" action="{{ url_for('login') }}" method="POST">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+                <button type="submit">Login</button>
+                <p>Don’t have an account? <a href="#" onclick="switchToRegister()">Register here</a></p>
+            </form>
+
+            <!-- Register Form -->
+            <form id="registerForm" action="{{ url_for('register') }}" method="POST" style="display: none;">
+                <label for="reg-email">Email:</label>
+                <input type="email" id="reg-email" name="reg-email" required>
+                <label for="reg-password">Password:</label>
+                <input type="password" id="reg-password" name="reg-password" required>
+                <label for="confirm-password">Confirm Password:</label>
+                <input type="password" id="confirm-password" name="confirm-password" required>
+                <button type="submit">Register</button>
+                <p>Already have an account? <a href="#" onclick="switchToLogin()">Login here</a></p>
+            </form>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/modal.js') }}"></script>
     
     <section class="hero">
         <div class="hero-content">
@@ -52,43 +107,5 @@
     <footer>
         <p>&copy; 2024 Thrift and Thrive. All rights reserved.</p>
     </footer>
-
-    <header>
-        <div class="navbar">
-            <a href="/">Home</a>
-            <a href="/about">About</a>
-            <a href="/contact">Contact</a>
-            <a href="/profile">Profile</a>
-            <a href="#" onclick="openModal()">Login</a>
-        </div>
-    </header>
-    
-    <!-- Registration/Login Modal -->
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <h2>Login / Register</h2>
-            <form id="loginForm">
-                <label for="email">Email:</label>
-                <input type="email" id="email" name="email" required>
-                <label for="password">Password:</label>
-                <input type="password" id="password" name="password" required>
-                <button type="submit">Login</button>
-                <p>Don’t have an account? <a href="#" onclick="switchToRegister()">Register here</a></p>
-            </form>
-            <form id="registerForm" style="display: none;">
-                <label for="reg-email">Email:</label>
-                <input type="email" id="reg-email" name="reg-email" required>
-                <label for="reg-password">Password:</label>
-                <input type="password" id="reg-password" name="reg-password" required>
-                <label for="confirm-password">Confirm Password:</label>
-                <input type="password" id="confirm-password" name="confirm-password" required>
-                <button type="submit">Register</button>
-                <p>Already have an account? <a href="#" onclick="switchToLogin()">Login here</a></p>
-            </form>
-        </div>
-    </div>
-    
-    <script src="{{ url_for('static', filename='js/modal.js') }}"></script>
 </body>
 </html>
