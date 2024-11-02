@@ -63,8 +63,28 @@
                         <div class="cart-item-details">
                             <h2>{{ product.name }}</h2>
                             <p>Price: ${{ product.price }}</p>
-                            <input type="number" value="{{ cart_item.quantity }}" min="1" onchange="updateCart({{ product.id }}, this.value)" class="quantity-input">
-                            <button onclick="removeFromCart({{ product.id }})" class="remove-btn">Remove</button>
+                            <form action="{{ url_for('updateitem') }}" method="POST" class="update-item-form">
+                                <input type="number" name="quantity" value="{{ cart_item.quantity }}" min="1" class="quantity-input" onchange="enableUpdateButton(this)">
+                                <input type="hidden" name="product_id" value="{{ product.id }}">
+                                <input type="hidden" name="action" value="">
+                            
+                                <button type="submit" class="remove-btn" onclick="setFormAction(this, 'remove')">Remove</button>
+                                <button type="submit" class="update-btn" disabled onclick="setFormAction(this, 'update')">Update</button>
+                            </form>
+                            
+                            <script>
+                                function enableUpdateButton(input) {
+                                    const form = input.closest('form');
+                                    const updateButton = form.querySelector('.update-btn');
+                                    updateButton.disabled = false;
+                                }
+                            
+                                function setFormAction(button, actionType) {
+                                    // Set the action type before submitting the form
+                                    const form = button.closest('form');
+                                    form.querySelector('input[name="action"]').value = actionType;
+                                }
+                            </script>
                         </div>
                     </div>
                 {% endfor %}

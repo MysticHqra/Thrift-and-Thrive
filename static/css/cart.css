@@ -40,12 +40,32 @@ body {
     font-size: 1.2em;
 }
 
-.quantity-input {
-    width: 50px;
-    margin-left: 10px;
+.update-item-form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
 }
 
-.remove-btn, .checkout-btn {
+.quantity-input {
+    width: 60px;
+    height: 20px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    outline: none;
+    padding: 5px;
+    appearance: textfield;
+}
+
+.quantity-input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+.remove-btn{
     background-color: #f00;
     color: #fff;
     border: none;
@@ -54,8 +74,33 @@ body {
     border-radius: 4px;
 }
 
+.update-btn {
+    background-color: #007bff; /* Darker blue when disabled */
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    cursor: not-allowed; /* Disabled cursor */
+    border-radius: 4px;
+    opacity: 0.2; /* Slight transparency for disabled effect */
+}
+
+.update-btn:enabled {
+    background-color: #007bff; /* Lighter blue when enabled */
+    cursor: pointer;
+    opacity: 1; /* Full opacity when enabled */
+}
+
 .cart-summary {
     margin-top: 20px;
     font-size: 1.2em;
     text-align: right;
+}
+
+.checkout-btn {
+    background-color: rgb(50, 113, 56);
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 4px;
 }

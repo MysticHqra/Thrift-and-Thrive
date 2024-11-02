@@ -136,13 +136,45 @@ def add_to_cart(product_id):
 def cart():
     if 'user_id' not in session:
         flash("Please log in to view your cart.", "error")
-        # Redirect to referrer if available; otherwise, go to home page
         return redirect(request.referrer or url_for('home'))
 
     user_id = session['user_id']
+    # Get all cart items for the user, along with product details
     cart_items = db.session.query(Cart, Product).join(Product, Cart.product_id == Product.id).filter(Cart.user_id == user_id).all()
 
-    return render_template('cart.html', cart_items=cart_items)
+    # Calculate total items and total price
+    total_items = sum(cart_item.quantity for cart_item, product in cart_items)
+    total_price = round(sum(cart_item.quantity * product.price for cart_item, product in cart_items), 2)
+
+    # Pass the totals to the template
+    return render_template('cart.html', cart_items=cart_items, total_items=total_items, total_price=total_price)
+
+@app.route('/updateitem', methods=['POST'])
+def updateitem():
+    if 'user_id' not in session:
+        flash("Please log in to manage your cart.", "error")
+        return redirect(url_for('cart'))  # Redirect to login page if not logged in
+
+    product_id = request.form.get('product_id')
+    action = request.form.get('action')
+    user_id = session.get('user_id')
+
+    if action == "remove":
+        # Remove the item from the cart
+        Cart.query.filter_by(user_id=user_id, product_id=product_id).delete()
+        db.session.commit()
+        flash("Item removed from your cart.", "success")
+    
+    elif action == "update":
+        # Update the quantity of the item in the cart
+        quantity = request.form.get('quantity', type=int)
+        cart_item = Cart.query.filter_by(user_id=user_id, product_id=product_id).first()
+        if cart_item:
+            cart_item.quantity = quantity
+            db.session.commit()
+            flash("Cart updated successfully.", "success")
+    
+    return redirect(url_for('cart'))
 
 @app.route('/checkout')
 def checkout():
