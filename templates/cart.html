@@ -46,6 +46,7 @@
                 <a href="/cart"><span class="cart-icon">🛒 <span class="cart-count">{{ cart_count }}</span></span></a>
                 <a href="/logout">Logout</a>
             {% else %}
+                <a href="/cart"><span class="cart-icon">🛒 <span class="cart-count">{{ cart_count }}</span></span></a>
                 <a href="#" onclick="openModal()">Login</a>
             {% endif %}
         </div>
@@ -95,7 +96,9 @@
                 <button onclick="window.location.href='{{ url_for('checkout') }}'" class="checkout-btn">Proceed to Checkout</button>
             </div>
         {% else %}
-            <p>Your cart is empty.</p>
+            <section class="cart-footer">
+                <p>Your cart is empty.</p>
+            </section>
         {% endif %}
     </div>
 

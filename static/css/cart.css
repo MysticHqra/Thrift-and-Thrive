@@ -9,6 +9,11 @@ body {
     padding: 20px;
 }
 
+.cart-footer {
+    padding: 20px;
+    text-align: center;
+}
+
 .container {
     width: 80%;
     margin: 0 auto;

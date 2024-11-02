@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
+import random
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'  # Replace with a strong secret key
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///user.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///thrift_and_thrive.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -186,22 +187,56 @@ def checkout():
     cart_items = db.session.query(Cart, Product).join(Product, Cart.product_id == Product.id).filter(Cart.user_id == user_id).all()
     return render_template('checkout.html', cart_items=cart_items)
 
-
-@app.route('/add_sample_products')
-def add_sample_products():
-    product1 = Product(name="Vintage Jacket", price=29.99, image_url="https://via.placeholder.com/150", description="A stylish vintage jacket.")
-    product2 = Product(name="Classic Watch", price=89.99, image_url="https://via.placeholder.com/150", description="Timeless elegance.")
-    
-    db.session.add_all([product1, product2])
-    db.session.commit()
-    return "Sample products added!"
-
 @app.context_processor
 def cart_count_processor():
     cart_count = 0
     if 'user_id' in session:
         cart_count = Cart.query.filter_by(user_id=session['user_id']).count()
     return dict(cart_count=cart_count)
+
+@app.after_request
+def add_cache_control_header(response):
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+@app.route('/add_sample_products')
+def add_sample_products():
+    # Define a list of sample products with varying details
+    sample_products = [
+        {"name": "Vintage Jacket", "price": 29.99, "image_url": "https://via.placeholder.com/150", "description": "A stylish vintage jacket."},
+        {"name": "Classic Watch", "price": 89.99, "image_url": "https://via.placeholder.com/150", "description": "Timeless elegance."},
+        {"name": "Retro Sneakers", "price": 49.99, "image_url": "https://via.placeholder.com/150", "description": "Comfortable and stylish retro sneakers."},
+        {"name": "Leather Wallet", "price": 19.99, "image_url": "https://via.placeholder.com/150", "description": "A sleek, durable leather wallet."},
+        {"name": "Denim Backpack", "price": 39.99, "image_url": "https://via.placeholder.com/150", "description": "Casual and versatile denim backpack."},
+        {"name": "Minimalist Necklace", "price": 15.99, "image_url": "https://via.placeholder.com/150", "description": "Elegant necklace with a minimalist design."},
+        {"name": "Bluetooth Earbuds", "price": 59.99, "image_url": "https://via.placeholder.com/150", "description": "High-quality wireless earbuds for music on the go."}
+    ]
+
+    # Randomly select 3 to 5 products from the sample_products list
+    num_products_to_add = random.randint(3, 5)
+    products_to_add = random.sample(sample_products, num_products_to_add)
+
+    # Create Product instances and add them to the database
+    new_products = [Product(name=product["name"], price=product["price"], image_url=product["image_url"], description=product["description"]) for product in products_to_add]
+    
+    db.session.add_all(new_products)
+    db.session.commit()
+
+    return jsonify({"message": f"{num_products_to_add} sample products added!", "products": [product["name"] for product in products_to_add]})
+
+@app.route('/delete_all_products')
+def delete_all_products():
+    try:
+        # Delete all entries from the Product table
+        num_deleted = Product.query.delete()
+        db.session.commit()
+        
+        return jsonify({"message": f"Successfully deleted {num_deleted} products from the database."})
+    except Exception as e:
+        db.session.rollback()  # Roll back in case of an error
+        return jsonify({"error": "Failed to delete products", "details": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
