@@ -94,7 +94,9 @@
     <section class="shop-header">
         <h1>Catalogue</h1>
         <input type="text" id="search-bar" placeholder="Search for items..." onkeyup="filterItems()">
+        {% if 'user_id' in session %}
         <button id="sell-button" class="btn sell-button" onclick="openSellModal()">Looking to Sell?</button>
+        {% endif %}
     </section>
 
     <!-- Sell Product Modal -->
@@ -156,6 +158,7 @@
             {% if item.rating %}
             <p><strong>Rating:</strong> ⭐{{ item.rating }}</p>
             {% endif %}
+            <p><strong>Seller:</strong> {{ users[item.user_id] }}</p>  <!-- Display the seller's email -->
             <form action="{{ url_for('add_to_cart', product_id=item.id) }}" method="POST">
                 <button type="submit">Add to Cart</button>
             </form>

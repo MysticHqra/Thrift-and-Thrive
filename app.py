@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from werkzeug.utils import secure_filename
+from faker import Faker
 import os
 import random
 
@@ -21,6 +22,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(150), nullable=False)
+    products = db.relationship('Product', backref='user', lazy=True)  # Relationship to access user's products
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -30,6 +32,7 @@ class Product(db.Model):
     condition = db.Column(db.String(20), nullable=False)
     rating = db.Column(db.Float, default=0)
     image_filename = db.Column(db.String(100), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Foreign key to User
 
 class Cart(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -59,7 +62,8 @@ def profile():
 @app.route('/shop')
 def shop():
     products = Product.query.all()
-    return render_template('shop.html', products=products)
+    users = {user.id: user.email for user in User.query.all()}  # Create a dictionary mapping user IDs to emails
+    return render_template('shop.html', products=products, users=users)
 
 @app.errorhandler(404)
 def page_not_found(e):
@@ -122,7 +126,7 @@ def logout():
 def sell_product():
     if 'user_id' not in session:
         # Redirect to login page or return with an error flash
-        flash("You need to be logged in to add items to your cart.", "error")
+        flash("You need to be logged in to sell items.", "error")
         return redirect(url_for('shop'))  # Or redirect to the shop page
 
     name = request.form['name']
@@ -130,6 +134,7 @@ def sell_product():
     price = float(request.form['price'])
     condition = request.form['condition']
     image = request.files['image']
+    user_id = session['user_id']  # Retrieve user ID from session
 
     if image:
         # Save the image
@@ -138,15 +143,21 @@ def sell_product():
         image.save(image_path)
 
         # Create and save the new product in the database
-        new_product = Product(name=name, description=description, 
-                              price=price, condition=condition, image_filename=filename)
+        new_product = Product(
+            name=name,
+            description=description,
+            price=price,
+            condition=condition,
+            image_filename=filename,
+            user_id=user_id  # Associate the product with the user
+        )
         db.session.add(new_product)
         db.session.commit()
 
         flash("Product listed successfully!", "success")
         return redirect(url_for('shop'))
 
-    flash("Failed to list the product. Please try again.", "danger")
+    flash("Failed to list the product. Please try again.", "error")
     return redirect(url_for('shop'))
 
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
@@ -240,30 +251,43 @@ def add_cache_control_header(response):
     response.headers['Expires'] = '0'
     return response
 
-@app.route('/add_sample_products')
+fake = Faker()
+@app.route('/add_sample_products', methods=['GET'])
 def add_sample_products():
-    # Define a list of sample products with varying details
-    sample_products = [
-        {"name": "Vintage Jacket", "price": 29.99, "image_url": "https://via.placeholder.com/150", "description": "A stylish vintage jacket."},
-        {"name": "Classic Watch", "price": 89.99, "image_url": "https://via.placeholder.com/150", "description": "Timeless elegance."},
-        {"name": "Retro Sneakers", "price": 49.99, "image_url": "https://via.placeholder.com/150", "description": "Comfortable and stylish retro sneakers."},
-        {"name": "Leather Wallet", "price": 19.99, "image_url": "https://via.placeholder.com/150", "description": "A sleek, durable leather wallet."},
-        {"name": "Denim Backpack", "price": 39.99, "image_url": "https://via.placeholder.com/150", "description": "Casual and versatile denim backpack."},
-        {"name": "Minimalist Necklace", "price": 15.99, "image_url": "https://via.placeholder.com/150", "description": "Elegant necklace with a minimalist design."},
-        {"name": "Bluetooth Earbuds", "price": 59.99, "image_url": "https://via.placeholder.com/150", "description": "High-quality wireless earbuds for music on the go."}
-    ]
+    # Ensure the user is logged in
+    if 'user_id' not in session:
+        return jsonify({"message": "User not logged in."}), 403
 
-    # Randomly select 3 to 5 products from the sample_products list
-    num_products_to_add = random.randint(3, 5)
-    products_to_add = random.sample(sample_products, num_products_to_add)
+    # Generate a random number of products between 3 and 8
+    num_products = random.randint(3, 8)
+    sample_conditions = ["New", "Like New", "Used"]
+    sample_images = ["sample1.jpg", "sample2.jpg", "sample3.jpg", "sample4.jpg"]  # replace with your own image filenames in uploads folder
 
-    # Create Product instances and add them to the database
-    new_products = [Product(name=product["name"], price=product["price"], image_url=product["image_url"], description=product["description"]) for product in products_to_add]
+    # Get the logged-in user's ID
+    user_id = session['user_id']
+
+    new_products = []
     
-    db.session.add_all(new_products)
+    for _ in range(num_products):
+        product = Product(
+            name=fake.word().capitalize() + " " + fake.word().capitalize(),
+            description=fake.sentence(nb_words=10),
+            price=round(fake.random_number(digits=3), 2),  # generates a random price
+            condition=random.choice(sample_conditions),
+            image_filename=secure_filename(random.choice(sample_images)),
+            user_id=user_id  # Assign the logged-in user's ID to the product
+        )
+        db.session.add(product)
+        new_products.append(product)
+
+    # Commit all new products to the database
     db.session.commit()
 
-    return jsonify({"message": f"{num_products_to_add} sample products added!", "products": [product["name"] for product in products_to_add]})
+    # Return a JSON response confirming the products were added
+    return jsonify({
+        "message": f"Successfully added {num_products} sample products.",
+        "products_added": [{"name": p.name, "price": p.price, "condition": p.condition, "user_id": p.user_id} for p in new_products]
+    }), 201
 
 @app.route('/delete_all_products')
 def delete_all_products():
