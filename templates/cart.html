@@ -60,10 +60,11 @@
             <div class="cart-items">
                 {% for cart_item, product in cart_items %}
                     <div class="cart-item">
-                        <img src="{{ product.image_url }}" alt="{{ product.name }}" class="cart-item-image">
+                        <img src="{{ url_for('static', filename='uploads/' + product.image_filename) }}" alt="{{ product.name }}" class="cart-item-image" onerror="this.src='https://via.placeholder.com/150';">
                         <div class="cart-item-details">
                             <h2>{{ product.name }}</h2>
                             <p>Price: ${{ product.price }}</p>
+                            <p>Condition: {{ product.condition }}</p> <!-- Display condition -->
                             <form action="{{ url_for('updateitem') }}" method="POST" class="update-item-form">
                                 <input type="number" name="quantity" value="{{ cart_item.quantity }}" min="1" class="quantity-input" onchange="enableUpdateButton(this)">
                                 <input type="hidden" name="product_id" value="{{ product.id }}">
@@ -92,7 +93,7 @@
             </div>
             <div class="cart-summary">
                 <p>Total Items: {{ total_items }}</p>
-                <p>Total Price: ${{ total_price }}</p>
+                <p>Total Price: ₹{{ total_price }}</p> <!-- Updated currency symbol -->
                 <button onclick="window.location.href='{{ url_for('checkout') }}'" class="checkout-btn">Proceed to Checkout</button>
             </div>
         {% else %}

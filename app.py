@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
+from werkzeug.utils import secure_filename
+import os
 import random
 
 app = Flask(__name__)
@@ -8,6 +10,10 @@ app.config['SECRET_KEY'] = 'your_secret_key'  # Replace with a strong secret key
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///thrift_and_thrive.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')  # Define the folder where images will be uploaded
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER # Define the folder where images will be uploaded
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Create the 'uploads' folder if it doesn't exist
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 
@@ -19,9 +25,11 @@ class User(db.Model):
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=False)
     price = db.Column(db.Float, nullable=False)
-    image_url = db.Column(db.String(255), nullable=False)  # URL for the product image
-    description = db.Column(db.Text, nullable=True)
+    condition = db.Column(db.String(20), nullable=False)
+    rating = db.Column(db.Float, default=0)
+    image_filename = db.Column(db.String(100), nullable=False)
 
 class Cart(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -109,6 +117,37 @@ def logout():
     session.pop('user_id', None)
     flash("You have been logged out.", "success")
     return redirect(url_for('home'))
+
+@app.route('/sell', methods=['POST'])
+def sell_product():
+    if 'user_id' not in session:
+        # Redirect to login page or return with an error flash
+        flash("You need to be logged in to add items to your cart.", "error")
+        return redirect(url_for('shop'))  # Or redirect to the shop page
+
+    name = request.form['name']
+    description = request.form['description']
+    price = float(request.form['price'])
+    condition = request.form['condition']
+    image = request.files['image']
+
+    if image:
+        # Save the image
+        filename = secure_filename(image.filename)
+        image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        image.save(image_path)
+
+        # Create and save the new product in the database
+        new_product = Product(name=name, description=description, 
+                              price=price, condition=condition, image_filename=filename)
+        db.session.add(new_product)
+        db.session.commit()
+
+        flash("Product listed successfully!", "success")
+        return redirect(url_for('shop'))
+
+    flash("Failed to list the product. Please try again.", "danger")
+    return redirect(url_for('shop'))
 
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
 def add_to_cart(product_id):

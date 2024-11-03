@@ -94,16 +94,67 @@
     <section class="shop-header">
         <h1>Catalogue</h1>
         <input type="text" id="search-bar" placeholder="Search for items..." onkeyup="filterItems()">
+        <button id="sell-button" class="btn sell-button" onclick="openSellModal()">Looking to Sell?</button>
     </section>
+
+    <!-- Sell Product Modal -->
+    <div id="sell-modal" class="sell-modal">
+        <div class="sell-modal-content">
+            <span class="sell-close" onclick="closeSellModal()">&times;</span>
+            <h2>Sell Your Product</h2>
+            <form id="sell-form" action="/sell" method="POST" enctype="multipart/form-data">
+                <label for="name">Product Name:</label>
+                <input type="text" id="name" name="name" required>
+
+                <label for="description">Description:</label>
+                <textarea id="description" name="description" rows="3" required></textarea>
+
+                <label for="price">Price (₹):</label>
+                <input type="number" id="price" name="price" step="0.01" required>
+
+                <label for="condition">Condition:</label>
+                <select id="condition" name="condition">
+                    <option value="New">New</option>
+                    <option value="Like New">Like New</option>
+                    <option value="Used">Used</option>
+                </select>
+
+                <label for="image">Upload Image:</label>
+                <input type="file" id="image" name="image" accept="image/*" required>
+
+                <button type="submit" class="btn btn-success">Submit</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openSellModal() {
+            document.getElementById("sell-modal").style.display = "block";
+        }
+    
+        function closeSellModal() {
+            document.getElementById("sell-modal").style.display = "none";
+        }
+    
+        // Close the modal when clicking outside the modal content
+        window.onclick = function(event) {
+            if (event.target === document.getElementById("sell-modal")) {
+                closeSellModal();
+            }
+        };
+    </script>
 
     <section class="catalog">
         {% for item in products %}
         <div class="item-card">
-            <img src="{{ item.image_url }}" alt="{{ item.name }}">
+            <!-- Display product image -->
+            <img src="{{ url_for('static', filename='uploads/' + item.image_filename) }}" alt="{{ item.name }}" class="product-image" onerror="this.src='https://via.placeholder.com/150';">
             <h2>{{ item.name }}</h2>
-            <p>${{ item.price }}</p>
+            <p><strong>Price:</strong> ₹{{ item.price }}</p>
+            <p><strong>Condition:</strong> {{ item.condition }}</p>
+            <!-- Optional Rating Display -->
             {% if item.rating %}
-            <p>Rating: ⭐{{ item.rating }}</p>
+            <p><strong>Rating:</strong> ⭐{{ item.rating }}</p>
             {% endif %}
             <form action="{{ url_for('add_to_cart', product_id=item.id) }}" method="POST">
                 <button type="submit">Add to Cart</button>

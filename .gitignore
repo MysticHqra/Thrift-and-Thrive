@@ -2,3 +2,4 @@ venv/
 .venv/
 instance/
 ignore.py
+uploads
