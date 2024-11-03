@@ -11,7 +11,9 @@ A platform for listing and re-selling clothes and cheaper rates.
 - Open terminal/cmd
 - Change directory to where you want to install (e.g. `cd Documents/Projects/`)
 - Clone the repository (`git clone https://github.com/MysticHqra/Thrift-and-Thrive.git`)
-- `pip install -r requirements.txt`
+- Open the project folder (`cd Thrift-and-Thrive/`)
+- Optional step for Virtual Environment (`python -m venv .venv && source .venv/bin/activate`)
+- Install the required modules (`pip install -r requirements.txt`)
 
 ### Step 2 - Run the web server:
 - `python app.py`
