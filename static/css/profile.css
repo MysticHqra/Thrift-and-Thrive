@@ -1,0 +1,103 @@
+/* profile.css */
+body {
+    margin: 0;
+    font-family: 'Roboto', sans-serif;
+    background-color: #f0f4f8;
+    color: #333;
+}
+
+.profile-container {
+    max-width: 800px;
+    margin: 100px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2, h3 {
+    color: #007bff;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.address-management,
+.add-address {
+    margin-bottom: 30px;
+}
+
+.address-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+.address-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.address-item p {
+    margin: 0;
+    color: #555;
+    line-height: 1.4;
+}
+
+.no-address-msg {
+    text-align: center;
+    color: #888;
+}
+
+.delete-btn {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.delete-btn:hover {
+    background-color: #c82333;
+}
+
+.address-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.address-form input,
+.add-btn {
+    padding: 12px;
+    font-size: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    outline: none;
+}
+
+.address-form input:focus {
+    border-color: #007bff;
+}
+
+.add-btn {
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-weight: bold;
+}
+
+.add-btn:hover {
+    background-color: #0056b3;
+}

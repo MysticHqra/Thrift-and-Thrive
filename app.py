@@ -91,15 +91,77 @@ def about():
 def contact():
     return render_template('contact.html')
 
-@app.route('/profile')
+@app.route('/profile', methods=['GET'])
 def profile():
-    return render_template('profile.html')
+    if 'user_id' not in session:
+        flash("Please log in to view your cart.", "error")
+        return redirect(request.referrer or url_for('home'))
+    
+    user = User.query.get(session['user_id'])
+    # Load the user's addresses
+    user_addresses = Address.query.filter_by(user_id=user.id).all()
+    return render_template('profile.html', user=user, addresses=user_addresses)
+
+
+@app.route('/add_address', methods=['POST'])
+def add_address():
+    if 'user_id' not in session:
+        flash("Please log in to view your cart.", "error")
+        return redirect(request.referrer or url_for('home'))
+    user = User.query.get(session['user_id'])
+    # Handling address addition
+    street = request.form.get('street')
+    city = request.form.get('city')
+    state = request.form.get('state')
+    zip_code = request.form.get('zip_code')
+    country = request.form.get('country')
+    phone_number = request.form.get('phone_number')  # Optional
+    label = request.form.get('label')  # Optional
+
+    if street and city and state and zip_code and country:
+        new_address = Address(
+            user_id=user.id,
+            street=street,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            country=country,
+            phone_number=phone_number,
+            label=label
+        )
+        db.session.add(new_address)
+        db.session.commit()
+        flash('Address added successfully!', 'success')
+    else:
+        flash('Please fill all required fields.', 'danger')
+    return redirect(url_for('profile'))
+
+@app.route('/delete_address/<int:address_id>', methods=['POST'])
+def delete_address(address_id):
+    if 'user_id' not in session:
+        flash("Please log in to view your cart.", "error")
+        return redirect(request.referrer or url_for('home'))
+    user = User.query.get(session['user_id'])
+    address = Address.query.get_or_404(address_id)
+
+    if address.user_id != user.id:
+        flash("You don't have permission to delete this address.", 'danger')
+        return redirect(url_for('profile'))
+    
+    db.session.delete(address)
+    db.session.commit()
+    flash('Address deleted successfully!', 'success')
+    return redirect(url_for('profile'))
 
 @app.route('/shop')
 def shop():
     products = Product.query.all()
     users = {user.id: user.email for user in User.query.all()}  # Create a dictionary mapping user IDs to emails
     return render_template('shop.html', products=products, users=users)
+
+@app.route('/thank_you')
+def thank_you():
+    return render_template('thank_you.html')
 
 # Error handler for TemplateNotFound
 @app.errorhandler(TemplateNotFound)
@@ -328,10 +390,6 @@ def confirm_purchase():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
-
-@app.route('/thank_you')
-def thank_you():
-    return render_template('thank_you.html')
 
 @app.context_processor
 def inject_user_data():
@@ -572,7 +630,7 @@ def toggle_admin():
     return redirect(request.referrer or url_for('home'))
 
 @app.route('/add_sample_address')
-def add_address():
+def add_sample_address():
     if 'user_id' not in session:
         flash("Please log in to manage your addresses.", "error")
         return redirect(url_for('home'))
