@@ -4,33 +4,45 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>View Report</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/view_report.css') }}">
 </head>
 <body>
-    <header>
-        <h1>View Report</h1>
-        <a href="{{ url_for('admin') }}">Back to Admin Dashboard</a>
+    <header class="report-header">
+        <h1>Report Details</h1>
+        <a href="{{ url_for('admin') }}" class="back-button">← Back to Admin Dashboard</a>
     </header>
 
     <main>
-        <h2>Report Content</h2>
-        <table border="1" cellpadding="10">
-            <thead>
-                <tr>
-                    <th>Data</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for line in report_content %}
-                    <tr>
-                        <td>{{ line }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <section class="report-content">
+            <h2>Report Content</h2>
+            {% if report_content|length == 1 %}
+                <p class="no-data-message">No data found</p>
+            {% else %}
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Product Name</th>
+                            <th>Quantity</th>
+                            <th>Purchase Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for line in report_content[1:] %}
+                            <tr>
+                                {% for cell in line.split(',') %}
+                                    <td>{{ cell }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+        </section>
     </main>
 
-    <footer>
+    <footer class="report-footer">
         <p>&copy; 2024 Thrift and Thrive. All rights reserved.</p>
     </footer>
 </body>

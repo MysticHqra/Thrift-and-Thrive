@@ -6,6 +6,7 @@ from functools import wraps
 from faker import Faker
 from io import StringIO
 from datetime import datetime
+from jinja2 import TemplateNotFound
 import os
 import random
 import csv
@@ -86,9 +87,10 @@ def shop():
     users = {user.id: user.email for user in User.query.all()}  # Create a dictionary mapping user IDs to emails
     return render_template('shop.html', products=products, users=users)
 
-@app.errorhandler(404)
-def page_not_found(e):
-    return render_template('404.html'), 404
+# Error handler for TemplateNotFound
+@app.errorhandler(TemplateNotFound)
+def handle_template_not_found(error):
+    return render_template('404.html'), 404  # Render a custom 404 page
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -275,9 +277,13 @@ def inject_user_data():
 
 @app.after_request
 def add_cache_control_header(response):
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
+    dynamic_endpoints = ['shop', 'cart', 'admin']  # List of non-cacheable pages
+    if request.endpoint in dynamic_endpoints:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    else:
+        response.headers['Cache-Control'] = 'public, max-age=3600'  # Adjust cache time as needed
     return response
 
 def admin_required(f):
@@ -375,6 +381,26 @@ def delete_all_reports():
     flash("All reports have been successfully deleted.", "success")
     return redirect(url_for('admin'))
 
+
+@app.route('/delete_report/<int:report_id>', methods=['POST'])
+@admin_required
+def delete_report(report_id):
+    try:
+        report = Report.query.get(report_id)
+        if report:
+            file_path = report.file_path
+            if file_path and os.path.exists(file_path):
+                os.remove(file_path)
+            db.session.delete(report)
+            db.session.commit()
+            flash("Report and file deleted successfully.", "success")
+        else:
+            flash("Report not found.", "error")
+    except Exception as e:
+        db.session.rollback()  # Roll back in case of an error
+        flash("An error occurred while deleting the report.", "error")
+    return redirect(url_for('admin'))
+
 fake = Faker()
 @app.route('/add_sample_products', methods=['POST'])
 @admin_required
@@ -411,15 +437,20 @@ def add_sample_products():
 @admin_required
 def delete_all_products():
     try:
+        # Get all product IDs before deletion to find matching items in the cart
+        product_ids = [product.id for product in Product.query.all()]
         # Delete all entries from the Product table
         num_deleted = Product.query.delete()
+        # Delete corresponding cart items with those product IDs
+        Cart.query.filter(Cart.product_id.in_(product_ids)).delete(synchronize_session=False)
+        # Commit changes to the database
         db.session.commit()
 
-        flash(f"Successfully deleted {num_deleted} products from the database.", "success")
+        flash(f"Successfully deleted {num_deleted} products and corresponding cart entries from the database.", "success")
         return redirect(url_for('admin'))
     except Exception as e:
         db.session.rollback()  # Roll back in case of an error
-        flash("An error occurred while deleting products.", "error")
+        flash("An error occurred while deleting products and cart entries.", "error")
         return redirect(url_for('admin'))
 
 @app.route('/toggle_admin')

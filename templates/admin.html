@@ -63,7 +63,7 @@
             <h3>Bulk Catalogue Edit</h3>
             <div class="button-group">
                 <form action="{{ url_for('add_sample_products') }}" method="POST">
-                    <button type="submit" class="btn btn-danger">Add Sample Products</button>
+                    <button type="submit" class="btn btn-primary">Add Sample Products</button>
                 </form>
                 <form action="{{ url_for('delete_all_products') }}" method="POST" onsubmit="return confirm('Are you sure you want to delete all products? This action cannot be undone.');">
                     <button type="submit" class="btn btn-danger">Delete All Products</button>
@@ -76,21 +76,27 @@
             <h3>Generate Reports</h3>
             <a href="{{ url_for('generate_report') }}" class="btn btn-primary">Generate New Report as CSV</a>
         </section>
-    
-        <!-- Previous Reports Section -->
+
+        <!-- Show Previous Reports Section -->
         <section class="dashboard-section">
             <h3>Previous Reports</h3>
-            <form action="{{ url_for('delete_all_reports') }}" method="POST" onsubmit="return confirm('Are you sure you want to delete all reports? This action cannot be undone.');">
+            <form action="{{ url_for('delete_all_reports') }}" method="POST" onsubmit="return confirm('Are you sure you want to delete all reports? This action cannot be undone.');" class="delete-all-form">
                 <button type="submit" class="btn btn-danger">Delete All Reports</button>
             </form>
             <ul class="report-list">
                 {% for report in reports %}
-                    <li>
-                        <a href="{{ url_for('view_report', report_id=report.id) }}">View Report ({{ report.created_at.strftime('%Y-%m-%d %H:%M:%S') }})</a> |
-                        <a href="{{ url_for('download_report', report_id=report.id) }}">Download Report</a>
+                    <li class="report-item">
+                        <div class="report-info">
+                            <span class="report-date">{{ report.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                            <a href="{{ url_for('view_report', report_id=report.id) }}" class="btn btn-primary">View</a>
+                            <a href="{{ url_for('download_report', report_id=report.id) }}" class="btn btn-primary">Download</a>
+                            <form action="{{ url_for('delete_report', report_id=report.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this report?');">
+                                <button type="submit" class="btn btn-danger">Delete</button>
+                            </form>
+                        </div>
                     </li>
                 {% endfor %}
-            </ul>
+            </ul>            
         </section>
     </main>
 

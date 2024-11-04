@@ -66,22 +66,60 @@ body {
     opacity: 0.8;
 }
 
+/* Style for report list */
 .report-list {
-    list-style: none;
-    padding: 0;
+    list-style-type: none;
+    padding: 10px 0;
+    margin: 0;
 }
 
-.report-list li {
+.report-item {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 8px;
     margin-bottom: 10px;
-    font-size: 1em;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
-.report-list a {
-    color: rgb(121, 57, 145);
-    text-decoration: none;
+.report-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Style for report date */
+.report-date {
     font-weight: bold;
+    color: #555;
 }
 
-.report-list a:hover {
-    text-decoration: underline;
+/* Common button style */
+.btn {
+    text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-block;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Specific button colors */
+.btn-view {
+    background-color: #4CAF50; /* Green */
+    color: white;
+}
+
+.btn-download {
+    background-color: #007BFF; /* Blue */
+    color: white;
+}
+
+/* Hover effects for buttons */
+.btn:hover {
+    opacity: 0.9;
 }
