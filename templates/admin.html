@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thrift and Thrive</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+                <div class="flash {{ 'flash-success' if category == 'success' else '' }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% endwith %}
+    <script>
+        // JavaScript to auto-hide flash messages after 3 seconds
+        setTimeout(function() {
+            const flashMessages = document.querySelector('.flash-messages');
+            if (flashMessages) {
+                flashMessages.style.display = 'none';
+            }
+        }, 3000); // 3 seconds
+
+        // Open login modal automatically if login_failed is in the URL
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('login_failed')) {
+                openModal(); // Function to open login modal
+            }
+        });
+    </script>
+
+    <header>
+        <div class="navbar">
+            <a href="/">Home</a>
+            <a href="/shop">Shop</a>
+            <a href="/about">About</a>
+            {% if 'user_id' in session %}
+                <a href="/profile">Profile</a>
+                <a href="/cart"><span class="cart-icon">🛒 <span class="cart-count">{{ cart_count }}</span></span></a>
+                {% if is_admin %}
+                    <a href="/admin">Admin</a>
+                {% endif %}
+                <a href="/logout">Logout</a>
+            {% else %}
+                <a href="/cart"><span class="cart-icon">🛒 <span class="cart-count">{{ cart_count }}</span></span></a>
+                <a href="#" onclick="openModal()">Login</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <footer>
+        <p>&copy; 2024 Thrift and Thrive. All rights reserved.</p>
+    </footer>
+</body>
+</html>

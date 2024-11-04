@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from werkzeug.utils import secure_filename
+from functools import wraps
 from faker import Faker
 import os
 import random
@@ -22,7 +23,8 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(150), nullable=False)
-    products = db.relationship('Product', backref='user', lazy=True)  # Relationship to access user's products
+    products = db.relationship('Product', backref='user', lazy=True)  # Relationship to Product
+    is_admin = db.Column(db.Boolean, default=False)  # New field for admin users
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -238,11 +240,19 @@ def checkout():
     return render_template('checkout.html', cart_items=cart_items)
 
 @app.context_processor
-def cart_count_processor():
+def inject_user_data():
     cart_count = 0
+    is_admin = False
+    
     if 'user_id' in session:
+        # Get cart count
         cart_count = Cart.query.filter_by(user_id=session['user_id']).count()
-    return dict(cart_count=cart_count)
+        
+        # Check if the user is an admin
+        user = User.query.get(session['user_id'])
+        is_admin = user.is_admin if user else False
+
+    return {'cart_count': cart_count, 'is_admin': is_admin}
 
 @app.after_request
 def add_cache_control_header(response):
@@ -250,6 +260,23 @@ def add_cache_control_header(response):
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user_id = session.get('user_id')
+        user = User.query.get(user_id)
+        if not user or not user.is_admin:
+            flash("Admin access required.", "error")
+            return redirect(url_for('home'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/admin')
+@admin_required
+def admin_dashboard():
+    # Logic for managing the website, such as viewing users or products
+    return render_template('admin.html')
 
 fake = Faker()
 @app.route('/add_sample_products', methods=['GET'])
@@ -300,6 +327,26 @@ def delete_all_products():
     except Exception as e:
         db.session.rollback()  # Roll back in case of an error
         return jsonify({"error": "Failed to delete products", "details": str(e)}), 500
+
+@app.route('/toggle_admin')
+def toggle_admin():
+    if 'user_id' not in session:
+        flash("You need to be logged in to toggle admin status.", "error")
+        return redirect(url_for('home'))
+    
+    user_id = session['user_id']
+    user = User.query.get(user_id)
+    
+    if user:
+        # Toggle the admin status
+        user.is_admin = not user.is_admin
+        db.session.commit()
+        status = "now an admin" if user.is_admin else "no longer an admin"
+        flash(f"You are {status}!", "success")
+    else:
+        flash("User not found.", "error")
+    
+    return redirect(request.referrer or url_for('home'))
 
 if __name__ == '__main__':
     app.run(debug=True)
