@@ -1,11 +1,14 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from werkzeug.utils import secure_filename
 from functools import wraps
 from faker import Faker
+from io import StringIO
+from datetime import datetime
 import os
 import random
+import csv
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'  # Replace with a strong secret key
@@ -41,6 +44,22 @@ class Cart(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     quantity = db.Column(db.Integer, default=1)
+
+class Purchase(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    quantity = db.Column(db.Integer, default=1)
+    purchase_date = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    user = db.relationship('User', backref='purchases')
+    product = db.relationship('Product', backref='purchases')
+
+# Model to store report files
+class Report(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    file_path = db.Column(db.String(200), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 with app.app_context():
     db.create_all()
@@ -274,17 +293,92 @@ def admin_required(f):
 
 @app.route('/admin')
 @admin_required
-def admin_dashboard():
-    # Logic for managing the website, such as viewing users or products
-    return render_template('admin.html')
+def admin():
+    # Query all purchases and reports
+    purchases = Purchase.query.all()
+    reports = Report.query.order_by(Report.created_at.desc()).all()
+    
+    return render_template('admin.html', purchases=purchases, reports=reports)
+
+@app.route('/generate_report')
+@admin_required
+def generate_report():
+    # Fetch purchase data
+    purchases = Purchase.query.all()
+    
+    # Generate a unique filename with a timestamp
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    file_path = f'reports/user_purchases_report_{timestamp}.csv'
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    
+    # Create and write data to CSV file
+    with open(file_path, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(['User Email', 'Product Name', 'Quantity', 'Purchase Date'])
+        for purchase in purchases:
+            writer.writerow([
+                purchase.user.email,
+                purchase.product.name,
+                purchase.quantity,
+                purchase.purchase_date.strftime('%Y-%m-%d %H:%M:%S')
+            ])
+    
+    # Save report path to the database
+    report = Report(file_path=file_path)
+    db.session.add(report)
+    db.session.commit()
+    
+    # Notify admin and redirect
+    flash("Report generated successfully!", "success")
+    return redirect(url_for('admin'))
+
+@app.route('/view_report/<int:report_id>')
+@admin_required
+def view_report(report_id):
+    report = Report.query.get(report_id)
+    if report and os.path.exists(report.file_path):
+        # Assuming the report file is a CSV, you can read it and process it to display.
+        with open(report.file_path, 'r') as file:
+            content = file.readlines()  # Read the lines of the file
+
+        # Process content as needed. Here, we'll just pass it directly.
+        return render_template('view_report.html', report_content=content)
+    else:
+        flash("Report not found or deleted.", "error")
+        return redirect(url_for('admin'))
+
+@app.route('/download_report/<int:report_id>')
+@admin_required
+def download_report(report_id):
+    # Retrieve the report by ID
+    report = Report.query.get(report_id)
+    if report and os.path.exists(report.file_path):
+        return send_file(report.file_path, as_attachment=True)
+    else:
+        flash("Report not found or deleted.", "error")
+        return redirect(url_for('admin'))
+
+@app.route('/delete_all_reports', methods=['POST'])
+@admin_required
+def delete_all_reports():
+    # Retrieve all reports
+    reports = Report.query.all()
+    
+    # Loop through reports and delete each one
+    for report in reports:
+        if os.path.exists(report.file_path):  # Check if the file exists
+            os.remove(report.file_path)  # Delete the file
+        db.session.delete(report)  # Delete the report from the database
+    
+    db.session.commit()  # Commit the changes to the database
+    
+    flash("All reports have been successfully deleted.", "success")
+    return redirect(url_for('admin'))
 
 fake = Faker()
-@app.route('/add_sample_products', methods=['GET'])
+@app.route('/add_sample_products', methods=['POST'])
+@admin_required
 def add_sample_products():
-    # Ensure the user is logged in
-    if 'user_id' not in session:
-        return jsonify({"message": "User not logged in."}), 403
-
     # Generate a random number of products between 3 and 8
     num_products = random.randint(3, 8)
     sample_conditions = ["New", "Like New", "Used"]
@@ -310,23 +404,23 @@ def add_sample_products():
     # Commit all new products to the database
     db.session.commit()
 
-    # Return a JSON response confirming the products were added
-    return jsonify({
-        "message": f"Successfully added {num_products} sample products.",
-        "products_added": [{"name": p.name, "price": p.price, "condition": p.condition, "user_id": p.user_id} for p in new_products]
-    }), 201
+    flash(f"Successfully added {num_products} sample products.", "success")
+    return redirect(url_for('admin'))
 
-@app.route('/delete_all_products')
+@app.route('/delete_all_products', methods=['POST'])
+@admin_required
 def delete_all_products():
     try:
         # Delete all entries from the Product table
         num_deleted = Product.query.delete()
         db.session.commit()
-        
-        return jsonify({"message": f"Successfully deleted {num_deleted} products from the database."})
+
+        flash(f"Successfully deleted {num_deleted} products from the database.", "success")
+        return redirect(url_for('admin'))
     except Exception as e:
         db.session.rollback()  # Roll back in case of an error
-        return jsonify({"error": "Failed to delete products", "details": str(e)}), 500
+        flash("An error occurred while deleting products.", "error")
+        return redirect(url_for('admin'))
 
 @app.route('/toggle_admin')
 def toggle_admin():
