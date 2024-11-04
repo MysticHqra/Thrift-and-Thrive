@@ -68,13 +68,24 @@
                 <form action="{{ url_for('delete_all_products') }}" method="POST" onsubmit="return confirm('Are you sure you want to delete all products? This action cannot be undone.');">
                     <button type="submit" class="btn btn-danger">Delete All Products</button>
                 </form>
+                <form action="{{ url_for('delete_all_purchases') }}" method="POST" onsubmit="return confirm('Are you sure you want to delete all purchases? This action cannot be undone.');">
+                    <button type="submit" class="btn btn-danger">Delete All Purchases</button>
+                </form>
             </div>
         </section>
     
         <!-- Generate Reports Section -->
         <section class="dashboard-section">
             <h3>Generate Reports</h3>
-            <a href="{{ url_for('generate_report') }}" class="btn btn-primary">Generate New Report as CSV</a>
+            <form action="{{ url_for('generate_report') }}" method="GET">
+                <label for="from_date">From:</label>
+                <input type="date" id="from_date" name="from_date" required>
+                
+                <label for="to_date">To:</label>
+                <input type="date" id="to_date" name="to_date" required>
+
+                <button type="submit" class="btn btn-primary">Generate New Report as CSV</button>
+            </form>
         </section>
 
         <!-- Show Previous Reports Section -->

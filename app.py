@@ -5,7 +5,7 @@ from werkzeug.utils import secure_filename
 from functools import wraps
 from faker import Faker
 from io import StringIO
-from datetime import datetime
+from datetime import datetime, timedelta
 from jinja2 import TemplateNotFound
 import os
 import random
@@ -30,6 +30,20 @@ class User(db.Model):
     products = db.relationship('Product', backref='user', lazy=True)  # Relationship to Product
     is_admin = db.Column(db.Boolean, default=False)  # New field for admin users
 
+class Address(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Foreign key to User table
+    street = db.Column(db.String(200), nullable=False)
+    city = db.Column(db.String(100), nullable=False)
+    state = db.Column(db.String(100), nullable=False)
+    zip_code = db.Column(db.String(20), nullable=False)
+    country = db.Column(db.String(100), nullable=False)
+    phone_number = db.Column(db.String(20))  # Optional phone number field if needed
+    label = db.Column(db.String(50))  # Optional field for address label, like 'Home' or 'Office'
+
+    # Define a relationship back to the User table
+    user = db.relationship('User', backref=db.backref('addresses', lazy=True))
+
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -52,7 +66,7 @@ class Purchase(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     quantity = db.Column(db.Integer, default=1)
     purchase_date = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     user = db.relationship('User', backref='purchases')
     product = db.relationship('Product', backref='purchases')
 
@@ -220,8 +234,32 @@ def cart():
     total_items = sum(cart_item.quantity for cart_item, product in cart_items)
     total_price = round(sum(cart_item.quantity * product.price for cart_item, product in cart_items), 2)
 
-    # Pass the totals to the template
-    return render_template('cart.html', cart_items=cart_items, total_items=total_items, total_price=total_price)
+    # Retrieve all user addresses
+    user_addresses = Address.query.filter_by(user_id=user_id).all()
+
+    # Convert Address objects to dictionaries
+    serialized_addresses = [
+        {
+            "id": address.id,
+            "street": address.street,
+            "city": address.city,
+            "state": address.state,
+            "zip_code": address.zip_code,
+            "country": address.country,
+            "phone_number": address.phone_number,
+            "label": address.label
+        }
+        for address in user_addresses
+    ]
+
+    # Pass the serialized addresses to the template
+    return render_template(
+        'cart.html',
+        cart_items=cart_items,
+        total_items=total_items,
+        total_price=total_price,
+        user_addresses=serialized_addresses  # Pass the serialized list
+    )
 
 @app.route('/updateitem', methods=['POST'])
 def updateitem():
@@ -260,6 +298,41 @@ def checkout():
     cart_items = db.session.query(Cart, Product).join(Product, Cart.product_id == Product.id).filter(Cart.user_id == user_id).all()
     return render_template('checkout.html', cart_items=cart_items)
 
+@app.route('/confirm_purchase', methods=['POST'])
+def confirm_purchase():
+    if 'user_id' not in session:
+        return jsonify({"error": "User not logged in"}), 401
+
+    user_id = session['user_id']
+
+    try:
+        # Fetch all items from the cart for the current user
+        cart_items = Cart.query.filter_by(user_id=user_id).all()
+
+        # Add each item in the cart to the Purchase table
+        for cart_item in cart_items:
+            purchase = Purchase(
+                user_id=user_id,
+                product_id=cart_item.product_id,
+                quantity=cart_item.quantity,
+                purchase_date=datetime.utcnow()
+            )
+            db.session.add(purchase)
+
+        # Clear the cart after purchase
+        Cart.query.filter_by(user_id=user_id).delete()
+        
+        db.session.commit()
+        return jsonify({"status": "success"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/thank_you')
+def thank_you():
+    return render_template('thank_you.html')
+
 @app.context_processor
 def inject_user_data():
     cart_count = 0
@@ -277,13 +350,9 @@ def inject_user_data():
 
 @app.after_request
 def add_cache_control_header(response):
-    dynamic_endpoints = ['shop', 'cart', 'admin']  # List of non-cacheable pages
-    if request.endpoint in dynamic_endpoints:
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
-    else:
-        response.headers['Cache-Control'] = 'public, max-age=3600'  # Adjust cache time as needed
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
     return response
 
 def admin_required(f):
@@ -309,14 +378,29 @@ def admin():
 @app.route('/generate_report')
 @admin_required
 def generate_report():
-    # Fetch purchase data
-    purchases = Purchase.query.all()
-    
+    # Retrieve query parameters
+    from_date = request.args.get('from_date')
+    to_date = request.args.get('to_date')
+
+    # Validate date inputs
+    if from_date and to_date:
+        try:
+            from_date = datetime.strptime(from_date, '%Y-%m-%d')
+            to_date = datetime.strptime(to_date, '%Y-%m-%d') + timedelta(days=1)  # Include the entire end date
+        except ValueError:
+            flash("Invalid date format. Please use YYYY-MM-DD.", "danger")
+            return redirect(url_for('admin'))
+
+        # Fetch purchases within the specified date range
+        purchases = Purchase.query.filter(Purchase.purchase_date >= from_date, Purchase.purchase_date < to_date).all()
+    else:
+        purchases = []  # Handle the case where dates are not provided
+
     # Generate a unique filename with a timestamp
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     file_path = f'reports/user_purchases_report_{timestamp}.csv'
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    
+
     # Create and write data to CSV file
     with open(file_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
@@ -328,12 +412,12 @@ def generate_report():
                 purchase.quantity,
                 purchase.purchase_date.strftime('%Y-%m-%d %H:%M:%S')
             ])
-    
+
     # Save report path to the database
     report = Report(file_path=file_path)
     db.session.add(report)
     db.session.commit()
-    
+
     # Notify admin and redirect
     flash("Report generated successfully!", "success")
     return redirect(url_for('admin'))
@@ -452,6 +536,20 @@ def delete_all_products():
         db.session.rollback()  # Roll back in case of an error
         flash("An error occurred while deleting products and cart entries.", "error")
         return redirect(url_for('admin'))
+    
+@app.route('/delete_all_purchases', methods=['POST'])
+@admin_required
+def delete_all_purchases():
+    try:
+        # Delete all entries from the Purchase table
+        num_deleted = Purchase.query.delete()
+        # Commit changes to the database
+        db.session.commit()
+
+        flash(f"Successfully deleted {num_deleted} purchase entries from the database.", "success")
+        return redirect(url_for('admin'))
+    except Exception as e:
+        db.session.rollback()
 
 @app.route('/toggle_admin')
 def toggle_admin():
@@ -471,6 +569,29 @@ def toggle_admin():
     else:
         flash("User not found.", "error")
     
+    return redirect(request.referrer or url_for('home'))
+
+@app.route('/add_sample_address')
+def add_address():
+    if 'user_id' not in session:
+        flash("Please log in to manage your addresses.", "error")
+        return redirect(url_for('home'))
+    sample_address = Address(
+    user_id=1,
+    street="123 Maple Street",
+    city="Sample City",
+    state="Sample State",
+    zip_code="12345",
+    country="Sampleland",
+    phone_number="123-456-7890",
+    label="Home"
+    )
+
+    # Add the address to the session and commit to save it in the database
+    db.session.add(sample_address)
+    db.session.commit()
+
+    flash("Sample address added successfully!", "success")
     return redirect(request.referrer or url_for('home'))
 
 if __name__ == '__main__':
