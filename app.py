@@ -60,14 +60,27 @@ class Cart(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     quantity = db.Column(db.Integer, default=1)
 
-class Purchase(db.Model):
+
+class PurchaseEvent(db.Model):
+    __tablename__ = 'purchase_event'
+    
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
-    quantity = db.Column(db.Integer, default=1)
+    address_id = db.Column(db.Integer, db.ForeignKey('address.id'), nullable=False)
     purchase_date = db.Column(db.DateTime, default=datetime.utcnow)
 
-    user = db.relationship('User', backref='purchases')
+    user = db.relationship('User', backref='purchase_events')
+    address = db.relationship('Address', backref='purchase_events')
+    purchases = db.relationship('Purchase', backref='purchase_event', cascade='all, delete-orphan')
+
+class Purchase(db.Model):
+    __tablename__ = 'purchase'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    purchase_event_id = db.Column(db.Integer, db.ForeignKey('purchase_event.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    quantity = db.Column(db.Integer, default=1)
+
     product = db.relationship('Product', backref='purchases')
 
 # Model to store report files
@@ -366,18 +379,23 @@ def confirm_purchase():
         return jsonify({"error": "User not logged in"}), 401
 
     user_id = session['user_id']
+    address_id = request.json.get('address_id')  # Assume address_id is provided in the request
 
     try:
+        # Create a new PurchaseEvent with the selected address
+        purchase_event = PurchaseEvent(user_id=user_id, address_id=address_id)
+        db.session.add(purchase_event)
+        db.session.flush()  # Flush to get purchase_event.id for Purchase entries
+
         # Fetch all items from the cart for the current user
         cart_items = Cart.query.filter_by(user_id=user_id).all()
 
-        # Add each item in the cart to the Purchase table
+        # Add each item in the cart to the Purchase table, linked to the PurchaseEvent
         for cart_item in cart_items:
             purchase = Purchase(
-                user_id=user_id,
+                purchase_event_id=purchase_event.id,
                 product_id=cart_item.product_id,
-                quantity=cart_item.quantity,
-                purchase_date=datetime.utcnow()
+                quantity=cart_item.quantity
             )
             db.session.add(purchase)
 
@@ -385,11 +403,42 @@ def confirm_purchase():
         Cart.query.filter_by(user_id=user_id).delete()
         
         db.session.commit()
-        return jsonify({"status": "success"}), 200
+        return jsonify({"status": "success", "purchase_event_id": purchase_event.id}), 200
 
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/purchase_details/<int:purchase_event_id>')
+def purchase_details(purchase_event_id):
+    purchase_event = PurchaseEvent.query.get(purchase_event_id)
+
+    if not purchase_event:
+        return jsonify({"error": "Purchase event not found"}), 404
+
+    # Structure the response with details from PurchaseEvent, Address, and Purchase items
+    response = {
+        "purchase_event_id": purchase_event.id,
+        "user_id": purchase_event.user_id,
+        "address": {
+            "street": purchase_event.address.street,
+            "city": purchase_event.address.city,
+            "state": purchase_event.address.state,
+            "zip_code": purchase_event.address.zip_code,
+            "country": purchase_event.address.country,
+            "phone_number": purchase_event.address.phone_number
+        },
+        "purchase_date": purchase_event.purchase_date,
+        "items": [
+            {
+                "product_id": item.product_id,
+                "product_name": item.product.name,  # Assuming Product table has 'name' field
+                "quantity": item.quantity
+            } for item in purchase_event.purchases
+        ]
+    }
+
+    return jsonify(response), 200
 
 @app.context_processor
 def inject_user_data():
@@ -449,10 +498,13 @@ def generate_report():
             flash("Invalid date format. Please use YYYY-MM-DD.", "danger")
             return redirect(url_for('admin'))
 
-        # Fetch purchases within the specified date range
-        purchases = Purchase.query.filter(Purchase.purchase_date >= from_date, Purchase.purchase_date < to_date).all()
+        # Fetch purchase events within the specified date range
+        purchase_events = PurchaseEvent.query.filter(
+            PurchaseEvent.purchase_date >= from_date,
+            PurchaseEvent.purchase_date < to_date
+        ).all()
     else:
-        purchases = []  # Handle the case where dates are not provided
+        purchase_events = []  # Handle case where dates are not provided
 
     # Generate a unique filename with a timestamp
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
@@ -462,14 +514,31 @@ def generate_report():
     # Create and write data to CSV file
     with open(file_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(['User Email', 'Product Name', 'Quantity', 'Purchase Date'])
-        for purchase in purchases:
-            writer.writerow([
-                purchase.user.email,
-                purchase.product.name,
-                purchase.quantity,
-                purchase.purchase_date.strftime('%Y-%m-%d %H:%M:%S')
-            ])
+        
+        # Write headers for the CSV file
+        writer.writerow([
+            'User Email', 'User ID', 'Purchase Event ID', 'Address', 
+            'Product Name', 'Quantity', 'Purchase Date'
+        ])
+
+        # Write data grouped by purchase events
+        for event in purchase_events:
+            # Get user and address details for each purchase event
+            user_email = event.user.email
+            address = f"{event.address.street}, {event.address.city}, {event.address.state}, {event.address.zip_code}, {event.address.country}"
+            purchase_date = event.purchase_date.strftime('%Y-%m-%d %H:%M:%S')
+
+            # Write each item in the purchase event
+            for purchase in event.purchases:
+                writer.writerow([
+                    user_email,
+                    event.user_id,
+                    event.id,
+                    address,
+                    purchase.product.name,
+                    purchase.quantity,
+                    purchase_date
+                ])
 
     # Save report path to the database
     report = Report(file_path=file_path)
@@ -485,11 +554,11 @@ def generate_report():
 def view_report(report_id):
     report = Report.query.get(report_id)
     if report and os.path.exists(report.file_path):
-        # Assuming the report file is a CSV, you can read it and process it to display.
+        # Use csv.reader to handle quoted fields correctly
         with open(report.file_path, 'r') as file:
-            content = file.readlines()  # Read the lines of the file
+            reader = csv.reader(file)
+            content = [row for row in reader]  # Each row is a list of values
 
-        # Process content as needed. Here, we'll just pass it directly.
         return render_template('view_report.html', report_content=content)
     else:
         flash("Report not found or deleted.", "error")
@@ -599,15 +668,20 @@ def delete_all_products():
 @admin_required
 def delete_all_purchases():
     try:
-        # Delete all entries from the Purchase table
-        num_deleted = Purchase.query.delete()
+        # Delete all entries from the Purchase and PurchaseEvent tables
+        num_deleted_purchases = Purchase.query.delete()
+        num_deleted_events = PurchaseEvent.query.delete()
+
         # Commit changes to the database
         db.session.commit()
 
-        flash(f"Successfully deleted {num_deleted} purchase entries from the database.", "success")
+        flash(f"Successfully deleted {num_deleted_purchases} purchase entries and {num_deleted_events} purchase event entries from the database.", "success")
         return redirect(url_for('admin'))
     except Exception as e:
+        # Rollback in case of any error
         db.session.rollback()
+        flash("An error occurred while trying to delete entries.", "error")
+        return redirect(url_for('admin'))
 
 @app.route('/toggle_admin')
 def toggle_admin():

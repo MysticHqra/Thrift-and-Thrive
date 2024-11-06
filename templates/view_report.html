@@ -21,16 +21,15 @@
                 <table class="report-table">
                     <thead>
                         <tr>
-                            <th>User Email</th>
-                            <th>Product Name</th>
-                            <th>Quantity</th>
-                            <th>Purchase Date</th>
+                            {% for header in report_content[0] %}
+                                <th>{{ header }}</th>
+                            {% endfor %}
                         </tr>
                     </thead>
                     <tbody>
-                        {% for line in report_content[1:] %}
+                        {% for row in report_content[1:] %}
                             <tr>
-                                {% for cell in line.split(',') %}
+                                {% for cell in row %}
                                     <td>{{ cell }}</td>
                                 {% endfor %}
                             </tr>
