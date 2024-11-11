@@ -107,13 +107,16 @@ def contact():
 @app.route('/profile', methods=['GET'])
 def profile():
     if 'user_id' not in session:
-        flash("Please log in to view your cart.", "error")
+        flash("Please log in to view your profile.", "error")
         return redirect(request.referrer or url_for('home'))
     
     user = User.query.get(session['user_id'])
     # Load the user's addresses
     user_addresses = Address.query.filter_by(user_id=user.id).all()
-    return render_template('profile.html', user=user, addresses=user_addresses)
+    # Load the user's purchase events
+    purchase_events = PurchaseEvent.query.filter_by(user_id=user.id).all()
+
+    return render_template('profile.html', user=user, addresses=user_addresses, purchase_events=purchase_events)
 
 
 @app.route('/add_address', methods=['POST'])
